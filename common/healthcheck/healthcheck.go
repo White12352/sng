@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -34,6 +35,9 @@ type HealthCheck struct {
 	options *option.HealthCheckOptions
 
 	cancel context.CancelFunc
+
+	sync.Mutex
+	nStarted, nEnded int
 }
 
 // New creates a new HealthPing with settings.
@@ -128,6 +132,7 @@ func (h *HealthCheck) checkLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			h.logger.Error("checkLoop() started=", h.nStarted, ", ended=", h.nEnded)
 			go h.CheckAll()
 		}
 	}
@@ -135,6 +140,16 @@ func (h *HealthCheck) checkLoop(ctx context.Context) {
 
 // CheckAll performs checks for nodes of all providers
 func (h *HealthCheck) CheckAll() {
+	h.Lock()
+	h.nStarted++
+	h.logger.Error("CheckAll() starting #", h.nStarted)
+	h.Unlock()
+	defer func() {
+		h.Lock()
+		h.nEnded++
+		h.logger.Error("CheckAll() ending #", h.nEnded)
+		h.Unlock()
+	}()
 	batch, _ := batch.New(context.Background(), batch.WithConcurrencyNum[uint16](10))
 	// share ctx information between checks
 	ctx := NewContext(h.options.Connectivity)
