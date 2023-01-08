@@ -1,3 +1,7 @@
+#### 1.1.4
+
+* Fix crash
+
 #### 1.1.2
 
 * Fix http proxy auth
