@@ -25,7 +25,7 @@ require (
 	github.com/sagernet/cloudflare-tls v0.0.0-20221031050923-d70792f4c3a0
 	github.com/sagernet/quic-go v0.0.0-20221206044826-d15273f58d82
 	github.com/sagernet/sing v0.1.3
-	github.com/sagernet/sing-dns v0.1.2
+	github.com/sagernet/sing-dns v0.0.0-20230111061827-001e1b1b5f04
 	github.com/sagernet/sing-shadowsocks v0.1.0
 	github.com/sagernet/sing-tun v0.1.1
 	github.com/sagernet/sing-vmess v0.1.1
@@ -33,6 +33,7 @@ require (
 	github.com/sagernet/websocket v0.0.0-20220913015213-615516348b4e
 	github.com/sagernet/wireguard-go v0.0.0-20221116151939-c99467f53f2c
 	github.com/spf13/cobra v1.6.1
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.1
 	go.etcd.io/bbolt v1.3.6
 	go.uber.org/atomic v1.10.0
@@ -72,7 +73,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sagernet/go-tun2socks v1.16.12-0.20220818015926-16cb67876a61 // indirect
 	github.com/sagernet/netlink v0.0.0-20220905062125-8043b4a9aa97 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/mod v0.6.0 // indirect
