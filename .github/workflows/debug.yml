@@ -96,7 +96,7 @@ jobs:
       - name: Rename
         if: ${{ matrix.job.type=='WithCGO' }}
         run: |
-          cd bin
+          cd dist
           ls -la
           cp ../.github/rename-cgo.sh ./
           bash ./rename-cgo.sh
@@ -107,7 +107,7 @@ jobs:
       - name: Zip
         if: ${{  success() }}
         run: |
-          cd bin
+          cd dist
           ls -la
           chmod +x *
           cp ../.github/release.sh ./
@@ -120,7 +120,7 @@ jobs:
         if: ${{  success() }}
         with:
           name: artifact
-          path: bin/
+          path: dist/
 
   Build2:
     permissions: write-all
@@ -234,11 +234,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
-          path: bin/
+          path: dist/
 
       - name: Display structure of downloaded files
         run: ls -R
-        working-directory: bin
+        working-directory: dist
 
       - name: Delete current release assets
         uses: andreaswilli/delete-release-assets-action@v2.0.0
@@ -260,6 +260,6 @@ jobs:
         with:
           tag: ${{ github.ref_name }}
           tag_name: dev-next-${{ github.ref_name }}
-          files: bin/*
+          files: dist/*
           prerelease: true
           generate_release_notes: true
