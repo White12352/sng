@@ -73,7 +73,7 @@ jobs:
         run: |
           mkdir bin
           CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}"
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME}-android-arm64
 
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
