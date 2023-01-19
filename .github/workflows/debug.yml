@@ -96,7 +96,7 @@ jobs:
           NAME: sing-box
         run: |
           mkdir dist
-          xgo -v --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags="${LDFLAGS}" --out dist/${NAME} github.com/${{ github.repository }}/$(MAIN)
+          xgo -v --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags="${LDFLAGS}" --out dist/${NAME} github.com/${{ github.repository }}/cmd/sing-box
 
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
