@@ -1,0 +1,266 @@
+name: Prerelease
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev-next
+      - debug
+jobs:
+  Build:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { type: "WithoutCGO", target: "linux-amd64 linux-amd64-compatible", id: "1" }
+          - { type: "WithoutCGO", target: "linux-armv5 linux-armv6 linux-armv7", id: "2" }
+          - { type: "WithoutCGO", target: "linux-arm64 linux-mips64 linux-mips64le", id: "3" }
+          - { type: "WithoutCGO", target: "linux-mips-softfloat linux-mips-hardfloat linux-mipsle-softfloat linux-mipsle-hardfloat", id: "4" }
+          - { type: "WithoutCGO", target: "freebsd-386 freebsd-amd64 freebsd-arm64", id: "5" }
+          - { type: "WithoutCGO", target: "windows-amd64-compatible windows-amd64 windows-386", id: "6" }
+          - { type: "WithoutCGO", target: "windows-arm64 windows-arm32v7", id: "7" }
+          - { type: "WithoutCGO", target: "darwin-amd64 darwin-arm64 android-arm64", id: "8" }
+          - { type: "WithCGO", target: "windows/*", id: "1" }
+          - { type: "WithCGO", target: "linux/386,linux/amd64", id: "2" }
+          - { type: "WithCGO", target: "linux/arm64,linux/riscv64", id: "3" }
+          - { type: "WithCGO", target: "linux/arm,linux/arm-6,linux/arm-7", id: "4" }
+          - { type: "WithCGO", target: "linux/mips,linux/mipsle", id: "5" }
+          - { type: "WithCGO", target: "linux/mips64,linux/mips64le", id: "6" }
+          - { type: "WithCGO", target: "darwin-10.16/*", id: "7" }
+          - { type: "WithCGO", target: "android-arm64", id: "8" }
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Set ENV
+        run: |
+          echo "NAME=sing-box" >> $GITHUB_ENV
+          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "ShortSHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set ENV
+        run: |
+          echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+          check-latest: true
+
+      - name: Test
+        if: ${{ github.ref_name=='debug' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
+        run: |
+          go test ./...
+
+      - name: Build WithoutCGO
+        if: ${{ matrix.job.type=='WithoutCGO' }}
+        env:
+          NAME: sing-box
+          BINDIR: bin
+        run: make -j$(($(nproc) + 1)) ${{ matrix.job.target }}
+
+      - uses: nttld/setup-ndk@v1
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm64' }}
+        id: setup-ndk
+        with:
+          ndk-version: r25b
+          add-to-path: false
+          local-cache: true
+
+      - name: Build Android
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm64' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box -o bin/${NAME}-android-arm64
+
+      - name: Set up xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
+        run: |
+          docker pull techknowlogick/xgo:latest
+          go install src.techknowlogick.com/xgo@latest
+
+      - name: Build by xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box --out bin/${NAME} github.com/${{ github.repository }}
+
+      - name: Rename
+        if: ${{ matrix.job.type=='WithCGO' }}
+        run: |
+          cd bin
+          ls -la
+          cp ../.github/rename-cgo.sh ./
+          bash ./rename-cgo.sh
+          rm ./rename-cgo.sh
+          ls -la
+          cd ..
+
+      - name: Zip
+        if: ${{  success() }}
+        run: |
+          cd bin
+          ls -la
+          chmod +x *
+          cp ../.github/release.sh ./
+          bash ./release.sh
+          rm ./release.sh
+          ls -la
+          cd ..
+
+      - uses: actions/upload-artifact@v3
+        if: ${{  success() }}
+        with:
+          name: artifact
+          path: bin/
+
+  Build2:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { type: "WithCGO", target: "android-armv7", id: "1" }
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Set ENV
+        run: |
+          echo "NAME=sing-box" >> $GITHUB_ENV
+          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "ShortSHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set ENV
+        run: |
+          echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+          check-latest: true
+
+      - name: Test
+        if: ${{ github.ref_name=='Beta' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
+        run: |
+          go test ./...
+
+      - name: Build WithoutCGO
+        if: ${{ matrix.job.type=='WithoutCGO' }}
+        env:
+          NAME: sing-box
+          BINDIR: bin
+        run: make -j$(($(nproc) + 1)) ${{ matrix.job.target }}
+
+      - uses: nttld/setup-ndk@v1
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
+        id: setup-ndk
+        with:
+          ndk-version: r21e
+          add-to-path: false
+          local-cache: true
+
+      - name: Build Android
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm GOOS=android GOARM=7 go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box -o bin/${NAME}-android-armv7
+
+      - name: Set up xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
+        run: |
+          docker pull techknowlogick/xgo:latest
+          go install src.techknowlogick.com/xgo@latest
+
+      - name: Build by xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box --out bin/${NAME} github.com/${{ github.repository }}
+
+      - name: Rename
+        if: ${{ matrix.job.type=='WithCGO' }}
+        run: |
+          cd bin
+          ls -la
+          cp ../.github/rename-cgo.sh ./
+          bash ./rename-cgo.sh
+          rm ./rename-cgo.sh
+          ls -la
+          cd ..
+
+      - name: Zip
+        if: ${{  success() }}
+        run: |
+          cd bin
+          ls -la
+          chmod +x *
+          cp ../.github/release.sh ./
+          bash ./release.sh
+          rm ./release.sh
+          ls -la
+          cd ..
+
+      - uses: actions/upload-artifact@v3
+        if: ${{  success() }}
+        with:
+          name: artifact
+          path: bin/
+
+  Upload:
+    permissions: write-all
+    needs: [ Build, Build2 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: bin/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: bin
+
+      - name: Delete current release assets
+        uses: andreaswilli/delete-release-assets-action@v2.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: dev-next-${{ github.ref_name }}
+          deleteOnlyFromDrafts: false
+
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1.0.6
+        with:
+          tag_name: dev-next-${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Alpha
+        uses: softprops/action-gh-release@v1
+        if: ${{  success() }}
+        with:
+          tag: ${{ github.ref_name }}
+          tag_name: dev-next-${{ github.ref_name }}
+          files: bin/*
+          prerelease: true
+          generate_release_notes: true
