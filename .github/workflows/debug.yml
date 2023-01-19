@@ -75,6 +75,7 @@ jobs:
           GOARCH: arm64
           GOOS: android
         run: |
+          mkdir dist
           make
           
       - name: Set up xgo
@@ -90,8 +91,8 @@ jobs:
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
         run: |
-          mkdir bin
-          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" --out bin/${NAME} github.com/${{ github.repository }}
+          mkdir dist
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" --out dist/${NAME} github.com/${{ github.repository }}
 
       - name: Rename
         if: ${{ matrix.job.type=='WithCGO' }}
