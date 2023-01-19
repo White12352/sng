@@ -95,29 +95,6 @@ jobs:
           mkdir dist
           xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" --out dist/${NAME} github.com/${{ github.repository }}
 
-      - name: Rename
-        if: ${{ matrix.job.type=='WithCGO' }}
-        run: |
-          cd dist
-          ls -la
-          cp ../.github/rename-cgo.sh ./
-          bash ./rename-cgo.sh
-          rm ./rename-cgo.sh
-          ls -la
-          cd ..
-
-      - name: Zip
-        if: ${{  success() }}
-        run: |
-          cd dist
-          ls -la
-          chmod +x *
-          cp ../.github/release.sh ./
-          bash ./release.sh
-          rm ./release.sh
-          ls -la
-          cd ..
-
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
         with:
@@ -203,29 +180,6 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME} github.com/${{ github.repository }}
-
-      - name: Rename
-        if: ${{ matrix.job.type=='WithCGO' }}
-        run: |
-          cd dist
-          ls -la
-          cp ../.github/rename-cgo.sh ./
-          bash ./rename-cgo.sh
-          rm ./rename-cgo.sh
-          ls -la
-          cd ..
-
-      - name: Zip
-        if: ${{  success() }}
-        run: |
-          cd dist
-          ls -la
-          chmod +x *
-          cp ../.github/release.sh ./
-          bash ./release.sh
-          rm ./release.sh
-          ls -la
-          cd ..
 
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
