@@ -93,7 +93,7 @@ jobs:
           MAIN: ./cmd/sing-box
         run: |
           mkdir dist
-          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" --out dist/${NAME} github.com/${{ github.repository }}
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags "-s -w -buildid=" --out dist/${NAME} github.com/${{ github.repository }}
 
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
