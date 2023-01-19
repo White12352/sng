@@ -76,7 +76,9 @@ jobs:
           GOOS: android
           DIST: ./dist
           NAME: sing-box
-        run: CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o $(DIST)/$(NAME)-android-arm64 $(MAIN)
+        run: |
+          mkdir dist
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o $(DIST)/$(NAME)-android-arm64 $(MAIN)
           
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
@@ -91,6 +93,7 @@ jobs:
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
         run: |
+          mkdir dist
           xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" --out dist/${NAME} github.com/${{ github.repository }}
 
       - name: Rename
@@ -187,7 +190,9 @@ jobs:
           GOARM: 7
           DIST: ./dist
           NAME: sing-box
-        run: CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o $(DIST)/$(NAME)-android-armv7 $(MAIN)
+        run: |
+          mkdir dist
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o $(DIST)/$(NAME)-android-armv7 $(MAIN)
         
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
