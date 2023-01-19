@@ -77,7 +77,7 @@ jobs:
           DIST: ./dist
         run: |
           mkdir dist
-          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o $(DIST)/sing-box-android-arm64 $(MAIN)
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o dist//sing-box-android-arm64 $(MAIN)
           
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
@@ -187,10 +187,9 @@ jobs:
           GOARCH: arm
           GOOS: android
           GOARM: 7
-          DIST: ./dist
         run: |
           mkdir dist
-          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o $(DIST)/sing-box-android-armv7 $(MAIN)
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o dist/sing-box-android-armv7 $(MAIN)
         
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
