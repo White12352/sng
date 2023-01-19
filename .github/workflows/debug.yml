@@ -67,7 +67,7 @@ jobs:
       - name: Build Android
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm64' }}
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
           CGO_ENABLED: 1
@@ -175,11 +175,11 @@ jobs:
       - name: Build Android
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
           CGO_ENABLED: 1
-          CC: ${{ steps.setup-ndk.outputs.ndk-path }/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
           GOARCH: arm
           GOOS: android
           GOARM: 7
