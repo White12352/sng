@@ -75,7 +75,7 @@ jobs:
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
           GOARCH: arm64
           GOOS: android
-          NAME: sing-box
+          #NAME: sing-box
         run: |
           mkdir dist
           CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "${LDFLAGS}" -o dist/$(NAME)-android-arm64 $(MAIN)
@@ -184,7 +184,7 @@ jobs:
           GOARCH: arm
           GOOS: android
           GOARM: 7
-          NAME: sing-box
+          #NAME: sing-box
         run: |
           mkdir dist
           CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "${LDFLAGS}" -o dist/$(NAME)-android-armv7 $(MAIN)
