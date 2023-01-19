@@ -1,217 +1,266 @@
-name: Debug build
-
+name: Prerelease
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main-next
       - dev-next
-    paths-ignore:
-      - '**.md'
-      - '.github/**'
-      - '!.github/workflows/debug.yml'
-  pull_request:
-    branches:
-      - main-next
-      - dev-next
-
+      - debug
 jobs:
-  build:
-    name: Debug build
+  Build:
+    permissions: write-all
     runs-on: ubuntu-latest
-    steps:
-      - name: Cancel previous
-        uses: styfle/cancel-workflow-action@0.7.0
-        with:
-          access_token: ${{ github.token }}
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Get latest go version
-        id: version
-        run: |
-          echo ::set-output name=go_version::$(curl -s https://raw.githubusercontent.com/actions/go-versions/main/versions-manifest.json | grep -oE '"version": "[0-9]{1}.[0-9]{1,}(.[0-9]{1,})?"' | head -1 | cut -d':' -f2 | sed 's/ //g; s/"//g')
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ steps.version.outputs.go_version }}
-      - name: Cache go module
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: go-${{ hashFiles('**/go.sum') }}
-      - name: Add cache to Go proxy
-        run: |
-          version=`git rev-parse HEAD`
-          mkdir build
-          pushd build
-          go mod init build
-          go get -v github.com/sagernet/sing-box@$version
-          popd
-        continue-on-error: true
-      - name: Run Test
-        run: |
-          go test -v ./...
-  build_go118:
-    name: Debug build (Go 1.18)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.18.7
-      - name: Cache go module
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: go118-${{ hashFiles('**/go.sum') }}
-      - name: Run Test
-        run: |
-          go test -v ./...
-  cross:
     strategy:
-      matrix:
-        include:
-          # windows
-          - name: windows-amd64
-            goos: windows
-            goarch: amd64
-            goamd64: v1
-          - name: windows-amd64-v3
-            goos: windows
-            goarch: amd64
-            goamd64: v3
-          - name: windows-386
-            goos: windows
-            goarch: 386
-          - name: windows-arm64
-            goos: windows
-            goarch: arm64
-          - name: windows-arm32v7
-            goos: windows
-            goarch: arm
-            goarm: 7
-          
-          # linux
-          - name: linux-amd64
-            goos: linux
-            goarch: amd64
-            goamd64: v1
-          - name: linux-amd64-v3
-            goos: linux
-            goarch: amd64
-            goamd64: v3
-          - name: linux-386
-            goos: linux
-            goarch: 386
-          - name: linux-arm64
-            goos: linux
-            goarch: arm64
-          - name: linux-armv5
-            goos: linux
-            goarch: arm
-            goarm: 5
-          - name: linux-armv6
-            goos: linux
-            goarch: arm
-            goarm: 6
-          - name: linux-armv7
-            goos: linux
-            goarch: arm
-            goarm: 7
-          - name: linux-mips-softfloat
-            goos: linux
-            goarch: mips
-            gomips: softfloat
-          - name: linux-mips-hardfloat
-            goos: linux
-            goarch: mips
-            gomips: hardfloat
-          - name: linux-mipsel-softfloat
-            goos: linux
-            goarch: mipsle
-            gomips: softfloat
-          - name: linux-mipsel-hardfloat
-            goos: linux
-            goarch: mipsle
-            gomips: hardfloat
-          - name: linux-mips64
-            goos: linux
-            goarch: mips64
-          - name: linux-mips64el
-            goos: linux
-            goarch: mips64le
-          - name: linux-s390x
-            goos: linux
-            goarch: s390x
-          # darwin
-          - name: darwin-amd64
-            goos: darwin
-            goarch: amd64
-            goamd64: v1
-          - name: darwin-amd64-v3
-            goos: darwin
-            goarch: amd64
-            goamd64: v3
-          - name: darwin-arm64
-            goos: darwin
-            goarch: arm64
-          # freebsd
-          - name: freebsd-amd64
-            goos: freebsd
-            goarch: amd64
-            goamd64: v1
-          - name: freebsd-amd64-v3
-            goos: freebsd
-            goarch: amd64
-            goamd64: v3
-          - name: freebsd-386
-            goos: freebsd
-            goarch: 386
-          - name: freebsd-arm64
-            goos: freebsd
-            goarch: arm64
-
       fail-fast: false
-    runs-on: ubuntu-latest
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      GOAMD64: ${{ matrix.goamd64 }}
-      GOARM: ${{ matrix.goarm }}
-      GOMIPS: ${{ matrix.gomips }}
-      CGO_ENABLED: 0
-      TAGS: with_clash_api,with_quic
+      matrix:
+        job:
+          - { type: "WithoutCGO", target: "linux-amd64 linux-amd64-compatible", id: "1" }
+          - { type: "WithoutCGO", target: "linux-armv5 linux-armv6 linux-armv7", id: "2" }
+          - { type: "WithoutCGO", target: "linux-arm64 linux-mips64 linux-mips64le", id: "3" }
+          - { type: "WithoutCGO", target: "linux-mips-softfloat linux-mips-hardfloat linux-mipsle-softfloat linux-mipsle-hardfloat", id: "4" }
+          - { type: "WithoutCGO", target: "freebsd-386 freebsd-amd64 freebsd-arm64", id: "5" }
+          - { type: "WithoutCGO", target: "windows-amd64-compatible windows-amd64 windows-386", id: "6" }
+          - { type: "WithoutCGO", target: "windows-arm64 windows-arm32v7", id: "7" }
+          - { type: "WithoutCGO", target: "darwin-amd64 darwin-arm64 android-arm64", id: "8" }
+          - { type: "WithCGO", target: "windows/*", id: "1" }
+          - { type: "WithCGO", target: "linux/386,linux/amd64", id: "2" }
+          - { type: "WithCGO", target: "linux/arm64,linux/riscv64", id: "3" }
+          - { type: "WithCGO", target: "linux/arm,linux/arm-6,linux/arm-7", id: "4" }
+          - { type: "WithCGO", target: "linux/mips,linux/mipsle", id: "5" }
+          - { type: "WithCGO", target: "linux/mips64,linux/mips64le", id: "6" }
+          - { type: "WithCGO", target: "darwin-10.16/*", id: "7" }
+          - { type: "WithCGO", target: "android-arm64", id: "8" }
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Get latest go version
-        id: version
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Set ENV
         run: |
-          echo ::set-output name=go_version::$(curl -s https://raw.githubusercontent.com/actions/go-versions/main/versions-manifest.json | grep -oE '"version": "[0-9]{1}.[0-9]{1,}(.[0-9]{1,})?"' | head -1 | cut -d':' -f2 | sed 's/ //g; s/"//g')
+          echo "NAME=sing-box" >> $GITHUB_ENV
+          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "ShortSHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set ENV
+        run: |
+          echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
+        shell: bash
+
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: ${{ steps.version.outputs.go_version }}
-      - name: Cache go module
-        uses: actions/cache@v2
+          go-version: '1.19'
+          check-latest: true
+
+      - name: Test
+        if: ${{ github.ref_name=='debug' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
+        run: |
+          go test ./...
+
+      - name: Build WithoutCGO
+        if: ${{ matrix.job.type=='WithoutCGO' }}
+        env:
+          NAME: sing-box
+          BINDIR: bin
+        run: make -j$(($(nproc) + 1)) ${{ matrix.job.target }}
+
+      - uses: nttld/setup-ndk@v1
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm64' }}
+        id: setup-ndk
         with:
-          path: |
-            ~/go/pkg/mod
-          key: go-${{ hashFiles('**/go.sum') }}
-      - name: Build
-        id: build
-        run: make
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
+          ndk-version: r25b
+          add-to-path: false
+          local-cache: true
+
+      - name: Build Android
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm64' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box -o bin/${NAME}-android-arm64
+
+      - name: Set up xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
+        run: |
+          docker pull techknowlogick/xgo:latest
+          go install src.techknowlogick.com/xgo@latest
+
+      - name: Build by xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box --out bin/${NAME} github.com/${{ github.repository }}
+
+      - name: Rename
+        if: ${{ matrix.job.type=='WithCGO' }}
+        run: |
+          cd bin
+          ls -la
+          cp ../.github/rename-cgo.sh ./
+          bash ./rename-cgo.sh
+          rm ./rename-cgo.sh
+          ls -la
+          cd ..
+
+      - name: Zip
+        if: ${{  success() }}
+        run: |
+          cd bin
+          ls -la
+          chmod +x *
+          cp ../.github/release.sh ./
+          bash ./release.sh
+          rm ./release.sh
+          ls -la
+          cd ..
+
+      - uses: actions/upload-artifact@v3
+        if: ${{  success() }}
         with:
-          name: sing-box-${{ matrix.name }}
-          path: sing-box*
+          name: artifact
+          path: bin/
+
+  Build2:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { type: "WithCGO", target: "android-armv7", id: "1" }
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Set ENV
+        run: |
+          echo "NAME=sing-box" >> $GITHUB_ENV
+          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "ShortSHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set ENV
+        run: |
+          echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+          check-latest: true
+
+      - name: Test
+        if: ${{ github.ref_name=='Beta' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
+        run: |
+          go test ./...
+
+      - name: Build WithoutCGO
+        if: ${{ matrix.job.type=='WithoutCGO' }}
+        env:
+          NAME: sing-box
+          BINDIR: bin
+        run: make -j$(($(nproc) + 1)) ${{ matrix.job.target }}
+
+      - uses: nttld/setup-ndk@v1
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
+        id: setup-ndk
+        with:
+          ndk-version: r21e
+          add-to-path: false
+          local-cache: true
+
+      - name: Build Android
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm GOOS=android GOARM=7 go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box -o bin/${NAME}-android-armv7
+
+      - name: Set up xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
+        run: |
+          docker pull techknowlogick/xgo:latest
+          go install src.techknowlogick.com/xgo@latest
+
+      - name: Build by xgo
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          mkdir bin
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box --out bin/${NAME} github.com/${{ github.repository }}
+
+      - name: Rename
+        if: ${{ matrix.job.type=='WithCGO' }}
+        run: |
+          cd bin
+          ls -la
+          cp ../.github/rename-cgo.sh ./
+          bash ./rename-cgo.sh
+          rm ./rename-cgo.sh
+          ls -la
+          cd ..
+
+      - name: Zip
+        if: ${{  success() }}
+        run: |
+          cd bin
+          ls -la
+          chmod +x *
+          cp ../.github/release.sh ./
+          bash ./release.sh
+          rm ./release.sh
+          ls -la
+          cd ..
+
+      - uses: actions/upload-artifact@v3
+        if: ${{  success() }}
+        with:
+          name: artifact
+          path: bin/
+
+  Upload:
+    permissions: write-all
+    needs: [ Build, Build2 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: bin/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: bin
+
+      - name: Delete current release assets
+        uses: andreaswilli/delete-release-assets-action@v2.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: dev-next-${{ github.ref_name }}
+          deleteOnlyFromDrafts: false
+
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1.0.6
+        with:
+          tag_name: dev-next-${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Alpha
+        uses: softprops/action-gh-release@v1
+        if: ${{  success() }}
+        with:
+          tag: ${{ github.ref_name }}
+          tag_name: dev-next-${{ github.ref_name }}
+          files: bin/*
+          prerelease: true
+          generate_release_notes: true
