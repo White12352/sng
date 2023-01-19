@@ -67,16 +67,14 @@ jobs:
       - name: Build Android
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm64' }}
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
           CGO_ENABLED: 1
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
           GOARCH: arm64
           GOOS: android
-        run: |
-          mkdir dist
-          make
+        run: make -j$(($(nproc) + 1))
           
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
@@ -91,7 +89,6 @@ jobs:
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
         run: |
-          mkdir dist
           xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" --out dist/${NAME} github.com/${{ github.repository }}
 
       - name: Rename
@@ -178,12 +175,16 @@ jobs:
       - name: Build Android
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          mkdir bin
-          CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
-          CGO_ENABLED=1 CC=${CC} GOARCH=arm GOOS=android GOARM=7 go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" -o bin/${NAME}-android-armv7
-
+          #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
+          MAIN: ./cmd/sing-box
+          CGO_ENABLED: 1
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
+          GOARCH: arm
+          GOOS: android
+          GOARM: 7
+        run: make -j$(($(nproc) + 1))
+        
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
         run: |
@@ -195,13 +196,12 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          mkdir bin
           xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME} github.com/${{ github.repository }}
 
       - name: Rename
         if: ${{ matrix.job.type=='WithCGO' }}
         run: |
-          cd bin
+          cd dist
           ls -la
           cp ../.github/rename-cgo.sh ./
           bash ./rename-cgo.sh
@@ -212,7 +212,7 @@ jobs:
       - name: Zip
         if: ${{  success() }}
         run: |
-          cd bin
+          cd dist
           ls -la
           chmod +x *
           cp ../.github/release.sh ./
@@ -225,7 +225,7 @@ jobs:
         if: ${{  success() }}
         with:
           name: artifact
-          path: bin/
+          path: dist/
 
   Upload:
     permissions: write-all
