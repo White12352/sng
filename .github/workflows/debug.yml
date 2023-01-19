@@ -46,7 +46,7 @@ jobs:
       - name: Test
         if: ${{ github.ref_name=='debug' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
         run: |
-          go test ./...
+          go test -v ./...
 
       - name: Build WithoutCGO
         if: ${{ matrix.job.type=='WithoutCGO' }}
@@ -70,7 +70,6 @@ jobs:
           #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           LDFLAGS: -s -w -buildid=
-          #MAIN: ./cmd/sing-box
           CGO_ENABLED: 1
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
           GOARCH: arm64
@@ -132,7 +131,7 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - { type: "WithCGO", target: "android-armv7", id: "1" }
+          - { type: "WithCGO", target: "android-arm-7", id: "1" }
 
     steps:
       - name: Check out code into the Go module directory
@@ -154,18 +153,17 @@ jobs:
       - name: Test
         if: ${{ github.ref_name=='debug' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
         run: |
-          go test ./...
+          go test -v ./...
 
       - name: Build WithoutCGO
         if: ${{ matrix.job.type=='WithoutCGO' }}
         env:
           NAME: sing-box
           TAGS: with_gvisor
-          #MAIN: ./cmd/sing-box
         run: make -j$(($(nproc) + 1)) ${{ matrix.job.target }}
 
       - uses: nttld/setup-ndk@v1
-        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm-7' }}
         id: setup-ndk
         with:
           ndk-version: r21e
@@ -173,30 +171,29 @@ jobs:
           local-cache: true
 
       - name: Build Android
-        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-armv7' }}
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target=='android-arm-7' }}
         env:
           #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           LDFLAGS: -s -w -buildid=
-          MAIN: ./cmd/sing-box
           CGO_ENABLED: 1
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
           GOARCH: arm
           GOOS: android
           GOARM: 7
-          #NAME: sing-box
+          NAME: sing-box
         run: |
           mkdir dist
-          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "${LDFLAGS}" -o dist/sing-box-android-armv7 ./cmd/sing-box
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "${LDFLAGS}" -o dist/${NAME}-android-arm-7 ./cmd/sing-box
         
       - name: Set up xgo
-        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm-7' }}
         run: |
           docker pull techknowlogick/xgo:latest
           go install src.techknowlogick.com/xgo@latest
 
       - name: Build by xgo
-        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
+        if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm-7' }}
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
