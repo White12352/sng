@@ -70,11 +70,13 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
           MAIN: ./cmd/sing-box
+          CGO_ENABLED: 1
+          CC: ${{ANDROID_NDK_HOME}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          GOARCH: arm64
+          GOOS: android
         run: |
-          mkdir bin
-          CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME}-android-arm64
-
+          make
+          
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
         run: |
