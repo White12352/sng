@@ -44,6 +44,7 @@ jobs:
       - name: Set ENV
         run: |
           echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
+          echo "MAIN=./cmd/sing-box" >> $GITHUB_ENV
         shell: bash
 
       - name: Setup Go
@@ -79,7 +80,7 @@ jobs:
         run: |
           mkdir bin
           CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box -o bin/${NAME}-android-arm64
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm64 GOOS=android go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" -o bin/${NAME}-android-arm64
 
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
@@ -93,7 +94,7 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           mkdir bin
-          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box --out bin/${NAME} github.com/${{ github.repository }}
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME} github.com/${{ github.repository }}
 
       - name: Rename
         if: ${{ matrix.job.type=='WithCGO' }}
@@ -147,6 +148,7 @@ jobs:
       - name: Set ENV
         run: |
           echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
+          echo "MAIN=./cmd/sing-box" >> $GITHUB_ENV
         shell: bash
 
       - name: Setup Go
@@ -182,7 +184,7 @@ jobs:
         run: |
           mkdir bin
           CC=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
-          CGO_ENABLED=1 CC=${CC} GOARCH=arm GOOS=android GOARM=7 go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box -o bin/${NAME}-android-armv7
+          CGO_ENABLED=1 CC=${CC} GOARCH=arm GOOS=android GOARM=7 go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" -o bin/${NAME}-android-armv7
 
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
@@ -196,7 +198,7 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           mkdir bin
-          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" ./cmd/sing-box --out bin/${NAME} github.com/${{ github.repository }}
+          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME} github.com/${{ github.repository }}
 
       - name: Rename
         if: ${{ matrix.job.type=='WithCGO' }}
