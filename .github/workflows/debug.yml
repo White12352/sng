@@ -98,11 +98,32 @@ jobs:
           mkdir dist
           xgo -v --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags="${LDFLAGS}" --out dist/${NAME} github.com/${{ github.repository }}/cmd/sing-box
 
+      - name: Rename
+        if: ${{ matrix.job.type=='WithCGO' }}
+        run: |
+          cd dist
+          ls -la
+          cp ../.github/rename-cgo.sh ./
+          bash ./rename-cgo.sh
+          rm ./rename-cgo.sh
+          ls -la
+          cd ..
+      - name: Zip
+        if: ${{  success() }}
+        run: |
+          cd dist
+          ls -la
+          chmod +x *
+          cp ../.github/release.sh ./
+          bash ./release.sh
+          rm ./release.sh
+          ls -la
+          cd ..
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
         with:
           name: artifact
-          path: /home/runner/work/sng/sng/*
+          path: dist/
 
   Build2:
     permissions: write-all
@@ -124,12 +145,6 @@ jobs:
           echo "ShortSHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
         shell: bash
 
-      - name: Set ENV
-        run: |
-          echo "TAGS=with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr" >> $GITHUB_ENV
-          echo "MAIN=./cmd/sing-box" >> $GITHUB_ENV
-        shell: bash
-
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -137,7 +152,7 @@ jobs:
           check-latest: true
 
       - name: Test
-        if: ${{ github.ref_name=='Beta' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
+        if: ${{ github.ref_name=='debug' && matrix.job.id=='1' && matrix.job.type=='WithoutCGO' }}
         run: |
           go test ./...
 
@@ -145,7 +160,8 @@ jobs:
         if: ${{ matrix.job.type=='WithoutCGO' }}
         env:
           NAME: sing-box
-          BINDIR: bin
+          TAGS: with_gvisor
+          #MAIN: ./cmd/sing-box
         run: make -j$(($(nproc) + 1)) ${{ matrix.job.target }}
 
       - uses: nttld/setup-ndk@v1
@@ -161,15 +177,17 @@ jobs:
         env:
           #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
+          LDFLAGS: -s -w -buildid=
           MAIN: ./cmd/sing-box
           CGO_ENABLED: 1
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
           GOARCH: arm
           GOOS: android
           GOARM: 7
+          NAME: sing-box
         run: |
           mkdir dist
-          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" -o dist/sing-box-android-armv7 ./cmd/sing-box
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -v -trimpath -tags "$(TAGS)" -ldflags "${LDFLAGS}" -o dist/$(NAME)-android-armv7 $(MAIN)
         
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
@@ -181,14 +199,40 @@ jobs:
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-armv7' }}
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
+          LDFLAGS: -s -w -buildid=
+          MAIN: cmd/sing-box
+          NAME: sing-box
         run: |
-          xgo --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" -v -trimpath -tags "$(TAGS)" -ldflags "-s -w -buildid=" "${MAIN}" --out bin/${NAME} github.com/${{ github.repository }}
+          mkdir dist
+          xgo -v --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags="${LDFLAGS}" --out dist/${NAME} github.com/${{ github.repository }}/cmd/sing-box
 
+      - name: Rename
+        if: ${{ matrix.job.type=='WithCGO' }}
+        run: |
+          cd dist
+          ls -la
+          cp ../.github/rename-cgo.sh ./
+          bash ./rename-cgo.sh
+          rm ./rename-cgo.sh
+          ls -la
+          cd ..
+      - name: Zip
+        if: ${{  success() }}
+        run: |
+          cd dist
+          ls -la
+          chmod +x *
+          cp ../.github/release.sh ./
+          bash ./release.sh
+          rm ./release.sh
+          ls -la
+          cd ..
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
         with:
           name: artifact
-          path: /home/runner/work/sng/sng/*
+          path: dist/
 
   Upload:
     permissions: write-all
@@ -198,4 +242,32 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
-          path: /home/runner/work/sng/sng/*
+          path: dist/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: dist
+
+      - name: Delete current release assets
+        uses: andreaswilli/delete-release-assets-action@v2.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: dev-next-${{ github.ref_name }}
+          deleteOnlyFromDrafts: false
+
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1.0.6
+        with:
+          tag_name: dev-next-${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Prerelease
+        uses: softprops/action-gh-release@v1
+        if: ${{  success() }}
+        with:
+          tag: ${{ github.ref_name }}
+          tag_name: dev-next-${{ github.ref_name }}
+          files: dist/*
+          prerelease: true
+          generate_release_notes: true
