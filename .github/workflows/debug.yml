@@ -75,11 +75,10 @@ jobs:
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
           GOARCH: arm64
           GOOS: android
-          DIST: dist
           NAME: sing-box
         run: |
           mkdir dist
-          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "$(LDFLAGS)" -o dist/$(NAME)-android-arm64 $(MAIN)
+          CGO_ENABLED=$(CGO_ENABLED) CC=$(CC) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -trimpath -tags "$(TAGS)" -ldflags "${LDFLAGS}" -o dist/$(NAME)-android-arm64 $(MAIN)
           
       - name: Set up xgo
         if: ${{ matrix.job.type=='WithCGO' && matrix.job.target!='android-arm64' }}
@@ -92,10 +91,12 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           TAGS: with_gvisor,with_quic,with_wireguard,with_grpc,with_ech,with_utls,with_shadowsocksr
-          MAIN: ./cmd/sing-box
+          LDFLAGS: -s -w -buildid=
+          MAIN: cmd/sing-box
+          NAME: sing-box
         run: |
           mkdir dist
-          xgo -v --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags="-s -w -buildid=" --out dist/${NAME} github.com/${{ github.repository }}/cmd/sing-box
+          xgo -v --branch ${{ github.ref_name }} --targets="${{ matrix.job.target }}" --tags="${TAGS}" -ldflags="${LDFLAGS}" --out dist/${NAME} github.com/${{ github.repository }}/$(MAIN)
 
       - uses: actions/upload-artifact@v3
         if: ${{  success() }}
