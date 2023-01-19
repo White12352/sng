@@ -19,10 +19,10 @@ do
         echo "rename linux $FILENAME"
         mv $FILENAME $FILENAME-cgo
     elif [[ $FILENAME =~ "android-arm64" ]];then
-        echo "rename android-arm64 $FILENAME"
+        echo "rename android arm64 $FILENAME"
         mv $FILENAME sing-box-android-arm64-cgo
     elif [[ $FILENAME =~ "android-armv7" ]];then
-        echo "rename android-armv7 $FILENAME"
+        echo "rename android armv7 $FILENAME"
         mv $FILENAME sing-box-android-armv7-cgo
     else echo "skip $FILENAME"
     fi
